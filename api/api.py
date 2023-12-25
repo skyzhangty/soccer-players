@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, abort
+from flask_cors import CORS
 import json
 
 app = Flask(__name__)
+CORS(app)
 
 # Load the JSON data
 with open('./soccer_small.json', 'r') as file:

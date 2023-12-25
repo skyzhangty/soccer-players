@@ -11,3 +11,10 @@ services:
     environment:
       - FLASK_ENV=development
     command: python api.py
+
+  ui:
+    build: ./ui
+    volumes:
+      - ./ui:/usr/share/nginx/html
+    ports:
+      - "8080:80"

@@ -1,0 +1,71 @@
+#players-table th span {
+    margin-left: 5px;
+    color: red;
+    font-weight: bold;
+}
+
+/* General Table Styling */
+#players-table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid #ddd;
+    font-family: Arial, sans-serif;
+}
+
+/* Table Headers */
+#players-table thead th {
+    background-color: #f2f2f2;
+    color: #333;
+    text-align: left;
+    padding: 8px;
+    border-bottom: 2px solid #ddd;
+}
+
+/* Table Rows */
+#players-table tbody td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Hover Effect for Rows */
+#players-table tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Zebra Striping for Rows */
+#players-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Responsive Table */
+@media screen and (max-width: 600px) {
+    #players-table thead {
+        display: none;
+    }
+
+    #players-table, #players-table tbody, #players-table tr, #players-table td {
+        display: block;
+        width: 100%;
+    }
+
+    #players-table tr {
+        margin-bottom: 15px;
+    }
+
+    #players-table td {
+        text-align: right;
+        padding-left: 50%;
+        text-align: right;
+        position: relative;
+    }
+
+    #players-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 50%;
+        padding-left: 15px;
+        font-weight: bold;
+        text-align: left;
+    }
+}
