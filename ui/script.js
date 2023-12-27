@@ -6,56 +6,95 @@ let displayedAttributes = [
   'Club',
   'Height',
   'Preferred_Foot',
-  'Age',
-  'Rating'
+  'Speed',
+  'Stamina',
+  'Crossing',
 ];
+const skillAttributes = [
+  "Weak_foot",
+  "Skill_Moves",
+  "Ball_Control",
+  "Dribbling",
+  "Marking",
+  "Sliding_Tackle",
+  "Standing_Tackle",
+  "Aggression",
+  "Reactions",
+  "Attacking_Position",
+  "Interceptions",
+  "Vision",
+  "Composure",
+  "Crossing",
+  "Short_Pass",
+  "Long_Pass",
+  "Acceleration",
+  "Speed",
+  "Stamina",
+  "Strength",
+  "Balance",
+  "Agility",
+  "Jumping",
+  "Heading",
+  "Shot_Power",
+  "Finishing",
+  "Long_Shots",
+  "Curve",
+  "Freekick_Accuracy",
+  "Penalties",
+  "Volleys",
+  "GK_Positioning",
+  "GK_Diving",
+  "GK_Kicking",
+  "GK_Handling",
+  "GK_Reflexes"
+]
 let availableAttributes = [];
 let currentPlayers = [];
 const defaultOption = 'Select an attribute';
 let sortAscending = true;
 let sortedColumn = null;
-
 d3.json(`${baseUrl}/attributes`)
-  .then((allAttributes) => {
-    availableAttributes = allAttributes.filter(
-      (attr) => !displayedAttributes.includes(attr),
-    );
-    populateDropdown();
-    updateTableHeaders();
-    fetchAndDisplayPlayers();
-  })
-  .catch((error) => console.error('Error fetching attributes: ', error));
+    .then((allAttributes) => {
+      availableAttributes = allAttributes.filter(
+          (attr) => !displayedAttributes.includes(attr),
+      );
+      populateDropdown();
+      updateTableHeaders();
+      fetchAndDisplayPlayers();
+    })
+    .catch((error) => console.error('Error fetching attributes: ', error));
 
 function fetchAndDisplayPlayers() {
   d3.json(`${baseUrl}/players`)
-    .then((players) => {
-      currentPlayers = players; // Store the fetched data
-      updateTableRows(currentPlayers);
-    })
-    .catch((error) => console.error('Error fetching players: ', error));
+      .then((players) => {
+        currentPlayers = players; // Store the fetched data
+        updateTableRows(currentPlayers);
+      })
+      .catch((error) => console.error('Error fetching players: ', error));
 }
 
-function populateDropdown(attributes) {
+function populateDropdown() {
   const dropdown = d3.select('#attribute-dropdown');
   dropdown.selectAll('option').remove(); // Clear existing options
   // Add a default prompt option
   dropdown
-    .append('option')
-    .text(defaultOption)
-    .attr('disabled', true)
-    .attr('selected', true);
+      .append('option')
+      .text(defaultOption)
+      .attr('disabled', true)
+      .attr('selected', true);
 
   // Add the rest of the options
   dropdown
-    .selectAll('option')
-    .data(availableAttributes, (d) => d)
-    .enter()
-    .append('option')
-    .text((d) => d);
+      .selectAll('option')
+      .data(availableAttributes, (d) => d)
+      .enter()
+      .append('option')
+      .text((d) => d);
 
   dropdown.on('change', function () {
     const selectedAttribute = d3.select(this).property('value');
     addColumnToTable(selectedAttribute);
+    d3.select("#bar-chart").selectAll('*').remove();
   });
 }
 
@@ -66,28 +105,28 @@ function updateTableHeaders() {
   thead.selectAll('th').remove(); // Clear existing headers
 
   thead
-    .selectAll('th')
-    .data(displayedAttributes)
-    .enter()
-    .append('th')
-    .html((d) => {
-      let sortIndicator = '';
-      if (d === sortedColumn) {
-        sortIndicator = sortAscending ? up : down;
-      }
-      return d + sortIndicator;
-    })
-    .style('cursor', 'pointer')
-    .on('click', function (event, attribute) {
-      sortTable(attribute);
-    })
-    .append('span')
-    .text('x')
-    .style('cursor', 'pointer')
-    .on('click', function (event, attribute) {
-      event.stopPropagation();
-      removeColumn(attribute);
-    });
+      .selectAll('th')
+      .data(displayedAttributes)
+      .enter()
+      .append('th')
+      .html((d) => {
+        let sortIndicator = '';
+        if (d === sortedColumn) {
+          sortIndicator = sortAscending ? up : down;
+        }
+        return d + sortIndicator;
+      })
+      .style('cursor', 'pointer')
+      .on('click', function (event, attribute) {
+        sortTable(attribute);
+      })
+      .append('span')
+      .text('x')
+      .style('cursor', 'pointer')
+      .on('click', function (event, attribute) {
+        event.stopPropagation();
+        removeColumn(attribute);
+      });
 }
 
 function sortTable(attribute) {
@@ -107,7 +146,12 @@ function sortTable(attribute) {
 function updateTableRows(players) {
   const tbody = d3.select('#players-table tbody');
   tbody.selectAll('tr').remove(); // Clear existing rows
-  const rows = tbody.selectAll('tr').data(players).enter().append('tr');
+  const rows = tbody.selectAll('tr').data(players).enter().append('tr')
+      .on("click", function (event, d) {
+        d3.selectAll("#players-table tr").classed("selected-row", false); // Remove highlight from all rows
+        d3.select(this).classed("selected-row", true); // Highlight selected row
+        updateVisualizations(d); // Update visualizations with selected player's data
+      });
 
   displayedAttributes.forEach((attr) => {
     rows.append('td').text((d) => d[attr]);
@@ -138,4 +182,67 @@ function removeColumn(attribute) {
   populateDropdown(); // Update the dropdown
   updateTableHeaders(); // Re-create the table headers
   updateTableRows(currentPlayers);
+}
+
+function updateVisualizations(playerData) {
+  const playerName = playerData.Name;
+  const numericData = skillAttributes.filter(skillAttr => displayedAttributes.includes(skillAttr))
+      .map(skillAttr => ({attribute: skillAttr, value: playerData[skillAttr]}));
+
+  updateBarChart(playerName, numericData);
+}
+
+function updateBarChart(playerName, numericData) {
+  const svgWidth = 600, svgHeight = 400; // Set the SVG width and height
+  const margin = {top: 60, right: 20, bottom: 30, left: 40};
+  const width = svgWidth - margin.left - margin.right;
+  const height = svgHeight - margin.top - margin.bottom;
+
+  const svg = d3.select("#bar-chart")
+      .attr("width", svgWidth)
+      .attr("height", svgHeight);
+
+  // Clear any previous SVG content
+  svg.selectAll("*").remove();
+
+  const x = d3.scaleBand()
+      .range([0, width])
+      .padding(0.1)
+      .domain(numericData.map(d => d.attribute));
+
+  const y = d3.scaleLinear()
+      .range([height, 0])
+      .domain([0, d3.max(numericData, d => d.value)]);
+
+  const chart = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  addPlayerName(svg, playerName, width, margin);
+
+  chart.selectAll(".bar")
+      .data(numericData)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.attribute))
+      .attr("y", d => y(d.value))
+      .attr("width", x.bandwidth()) // Dynamic width based on number of data points
+      .attr("height", d => height - y(d.value));
+
+  // Add the x Axis
+  chart.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x));
+
+  // Add the y Axis
+  chart.append("g")
+      .call(d3.axisLeft(y));
+
+}
+
+function addPlayerName(svg, playerName, width, margin) {
+  // Add the player's name as a title to the chart
+  svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", margin.top / 2)
+      .text(playerName);
 }

@@ -7,13 +7,21 @@
     <script src="https://d3js.org/d3.v6.min.js"></script>
 </head>
 <body>
-    <select id="attribute-dropdown"></select>
-    <table id="players-table">
-        <thead>
-            <tr></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div id="container">
+        <div id="table">
+            <select id="attribute-dropdown"></select>
+            <table id="players-table">
+                <thead>
+                <tr></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="visualization">
+            <svg id="bar-chart"></svg>
+            <svg id="histogram"></svg>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
