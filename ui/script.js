@@ -11,66 +11,68 @@ let displayedAttributes = [
   'Crossing',
 ];
 const skillAttributes = [
-  "Weak_foot",
-  "Skill_Moves",
-  "Ball_Control",
-  "Dribbling",
-  "Marking",
-  "Sliding_Tackle",
-  "Standing_Tackle",
-  "Aggression",
-  "Reactions",
-  "Attacking_Position",
-  "Interceptions",
-  "Vision",
-  "Composure",
-  "Crossing",
-  "Short_Pass",
-  "Long_Pass",
-  "Acceleration",
-  "Speed",
-  "Stamina",
-  "Strength",
-  "Balance",
-  "Agility",
-  "Jumping",
-  "Heading",
-  "Shot_Power",
-  "Finishing",
-  "Long_Shots",
-  "Curve",
-  "Freekick_Accuracy",
-  "Penalties",
-  "Volleys",
-  "GK_Positioning",
-  "GK_Diving",
-  "GK_Kicking",
-  "GK_Handling",
-  "GK_Reflexes"
-]
+  'Weak_foot',
+  'Skill_Moves',
+  'Ball_Control',
+  'Dribbling',
+  'Marking',
+  'Sliding_Tackle',
+  'Standing_Tackle',
+  'Aggression',
+  'Reactions',
+  'Attacking_Position',
+  'Interceptions',
+  'Vision',
+  'Composure',
+  'Crossing',
+  'Short_Pass',
+  'Long_Pass',
+  'Acceleration',
+  'Speed',
+  'Stamina',
+  'Strength',
+  'Balance',
+  'Agility',
+  'Jumping',
+  'Heading',
+  'Shot_Power',
+  'Finishing',
+  'Long_Shots',
+  'Curve',
+  'Freekick_Accuracy',
+  'Penalties',
+  'Volleys',
+  'GK_Positioning',
+  'GK_Diving',
+  'GK_Kicking',
+  'GK_Handling',
+  'GK_Reflexes',
+];
 let availableAttributes = [];
 let currentPlayers = [];
 const defaultOption = 'Select an attribute';
 let sortAscending = true;
 let sortedColumn = null;
+let selectedRowId = null;
+
 d3.json(`${baseUrl}/attributes`)
-    .then((allAttributes) => {
-      availableAttributes = allAttributes.filter(
-          (attr) => !displayedAttributes.includes(attr),
-      );
-      populateDropdown();
-      updateTableHeaders();
-      fetchAndDisplayPlayers();
-    })
-    .catch((error) => console.error('Error fetching attributes: ', error));
+  .then((allAttributes) => {
+    availableAttributes = allAttributes.filter(
+      (attr) => !displayedAttributes.includes(attr),
+    );
+    populateDropdown();
+    updateTableHeaders();
+    fetchAndDisplayPlayers();
+  })
+  .catch((error) => console.error('Error fetching attributes: ', error));
 
 function fetchAndDisplayPlayers() {
   d3.json(`${baseUrl}/players`)
-      .then((players) => {
-        currentPlayers = players; // Store the fetched data
-        updateTableRows(currentPlayers);
-      })
-      .catch((error) => console.error('Error fetching players: ', error));
+    .then((players) => {
+      currentPlayers = players; // Store the fetched data
+      updateTableRows(currentPlayers);
+    })
+    .catch((error) => console.error('Error fetching players: ', error));
 }
 
 function populateDropdown() {
@@ -78,26 +80,25 @@ function populateDropdown() {
   dropdown.selectAll('option').remove(); // Clear existing options
   // Add a default prompt option
   dropdown
-      .append('option')
-      .text(defaultOption)
-      .attr('disabled', true)
-      .attr('selected', true);
+    .append('option')
+    .text(defaultOption)
+    .attr('disabled', true)
+    .attr('selected', true);
 
   // Add the rest of the options
   dropdown
-      .selectAll('option')
-      .data(availableAttributes, (d) => d)
-      .enter()
-      .append('option')
-      .text((d) => d);
+    .selectAll('option')
+    .data(availableAttributes, (d) => d)
+    .enter()
+    .append('option')
+    .text((d) => d);
 
   dropdown.on('change', function () {
     const selectedAttribute = d3.select(this).property('value');
     addColumnToTable(selectedAttribute);
-    d3.select("#bar-chart").selectAll('*').remove();
+    clearSvg();
   });
 }
-
 function updateTableHeaders() {
   const thead = d3.select('#players-table thead tr');
   const up = '&#9650;';
@@ -105,28 +106,29 @@ function updateTableHeaders() {
   thead.selectAll('th').remove(); // Clear existing headers
 
   thead
-      .selectAll('th')
-      .data(displayedAttributes)
-      .enter()
-      .append('th')
-      .html((d) => {
-        let sortIndicator = '';
-        if (d === sortedColumn) {
-          sortIndicator = sortAscending ? up : down;
-        }
-        return d + sortIndicator;
-      })
-      .style('cursor', 'pointer')
-      .on('click', function (event, attribute) {
-        sortTable(attribute);
-      })
-      .append('span')
-      .text('x')
-      .style('cursor', 'pointer')
-      .on('click', function (event, attribute) {
-        event.stopPropagation();
-        removeColumn(attribute);
-      });
+    .selectAll('th')
+    .data(displayedAttributes)
+    .enter()
+    .append('th')
+    .html((d) => {
+      let sortIndicator = '';
+      if (d === sortedColumn) {
+        sortIndicator = sortAscending ? up : down;
+      }
+      return d + sortIndicator;
+    })
+    .style('cursor', 'pointer')
+    .on('click', function (event, attribute) {
+      sortTable(attribute);
+    })
+    .append('span')
+    .text('x')
+    .style('cursor', 'pointer')
+    .on('click', function (event, attribute) {
+      event.stopPropagation();
+      removeColumn(attribute);
+      clearSvg();
+    });
 }
 
 function sortTable(attribute) {
@@ -141,17 +143,28 @@ function sortTable(attribute) {
 
   updateTableHeaders();
   updateTableRows(currentPlayers);
+
+  if (selectedRowId) {
+    d3.selectAll('#players-table tr').classed('selected-row', false); // Remove existing highlights
+    d3.select(`#${selectedRowId}`).classed('selected-row', true); // Reapply highlight to the stored row ID
+  }
 }
 
 function updateTableRows(players) {
   const tbody = d3.select('#players-table tbody');
   tbody.selectAll('tr').remove(); // Clear existing rows
-  const rows = tbody.selectAll('tr').data(players).enter().append('tr')
-      .on("click", function (event, d) {
-        d3.selectAll("#players-table tr").classed("selected-row", false); // Remove highlight from all rows
-        d3.select(this).classed("selected-row", true); // Highlight selected row
-        updateVisualizations(d); // Update visualizations with selected player's data
-      });
+  const rows = tbody
+    .selectAll('tr')
+    .data(players)
+    .enter()
+    .append('tr')
+    .attr('id', (d) => 'player-row-' + d.Name.replace(/ /g, '_')) // Replace spaces with underscores
+    .on('click', function (event, d) {
+      d3.selectAll('#players-table tr').classed('selected-row', false); // Remove highlight from all rows
+      d3.select(this).classed('selected-row', true); // Highlight selected row
+      selectedRowId = d3.select(this).attr('id'); // Store the ID of the selected row
+      updateVisualizations(d); // Update visualizations with selected player's data
+    });
 
   displayedAttributes.forEach((attr) => {
     rows.append('td').text((d) => d[attr]);
@@ -186,102 +199,148 @@ function removeColumn(attribute) {
 
 function updateVisualizations(playerData) {
   const playerName = playerData.Name;
-  const numericData = skillAttributes.filter(skillAttr => displayedAttributes.includes(skillAttr))
-      .map(skillAttr => ({attribute: skillAttr, value: playerData[skillAttr]}));
+  const numericData = skillAttributes
+    .filter((skillAttr) => displayedAttributes.includes(skillAttr))
+    .map((skillAttr) => ({
+      attribute: skillAttr,
+      value: playerData[skillAttr],
+    }));
 
   updateBarChart(playerName, numericData);
   drawDotPlot(playerName, numericData);
 }
 
 function updateBarChart(playerName, numericData) {
-  const {svgWidth, svgHeight, margin, width, height} = getSvgSize();
+  const { svgWidth, svgHeight, margin, width, height } = getSvgSize();
 
-  const {svg, x, y} = setUpSvg('bar-chart', svgWidth, svgHeight, numericData, margin, width, height, playerName);
+  const { svg, x, y } = setUpSvg(
+    'bar-chart',
+    svgWidth,
+    svgHeight,
+    numericData,
+    margin,
+    width,
+    height,
+    playerName,
+  );
 
-  const chart = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+  const chart = svg
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  chart.selectAll(".bar")
-      .data(numericData)
-      .enter().append("rect")
-      .attr("class", "bar")
-      .attr("x", d => x(d.attribute))
-      .attr("y", d => y(d.value))
-      .attr("width", x.bandwidth()) // Dynamic width based on number of data points
-      .attr("height", d => height - y(d.value));
+  chart
+    .selectAll('.bar')
+    .data(numericData)
+    .enter()
+    .append('rect')
+    .attr('class', 'bar')
+    .attr('x', (d) => x(d.attribute))
+    .attr('y', (d) => y(d.value))
+    .attr('width', x.bandwidth()) // Dynamic width based on number of data points
+    .attr('height', (d) => height - y(d.value));
 
   // Add the x Axis
-  chart.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(x));
+  chart
+    .append('g')
+    .attr('transform', `translate(0,${height})`)
+    .call(d3.axisBottom(x));
 
   // Add the y Axis
-  chart.append("g")
-      .call(d3.axisLeft(y));
-
+  chart.append('g').call(d3.axisLeft(y));
 }
 
 function drawDotPlot(playerName, numericData) {
-  const {svgWidth, svgHeight, margin, width, height} = getSvgSize();
+  const { svgWidth, svgHeight, margin, width, height } = getSvgSize();
 
-  const {svg, x, y} = setUpSvg('dot-plot', svgWidth, svgHeight, numericData, margin, width, height, playerName);
+  const { svg, x, y } = setUpSvg(
+    'dot-plot',
+    svgWidth,
+    svgHeight,
+    numericData,
+    margin,
+    width,
+    height,
+    playerName,
+  );
   // Draw dots
-  svg.append("g")
-      .selectAll("circle")
-      .data(numericData)
-      .enter().append("circle")
-      .attr("class", "circle")
-      .attr("cx", d => x(d.attribute) + x.bandwidth() / 2) // Center dots in the band
-      .attr("cy", d => y(d.value))
-      .attr("r", 5);
+  svg
+    .append('g')
+    .selectAll('circle')
+    .data(numericData)
+    .enter()
+    .append('circle')
+    .attr('class', 'circle')
+    .attr('cx', (d) => x(d.attribute) + x.bandwidth() / 2) // Center dots in the band
+    .attr('cy', (d) => y(d.value))
+    .attr('r', 5);
 
   // Add the x Axis
-  svg.append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(x));
+  svg
+    .append('g')
+    .attr('transform', `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x));
 
   // Add the y Axis
-  svg.append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y));
+  svg
+    .append('g')
+    .attr('transform', `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y));
 }
 
 function getSvgSize() {
-  const svgWidth = 600, svgHeight = 400;
-  const margin = {top: 60, right: 20, bottom: 30, left: 40};
+  const svgWidth = 600,
+    svgHeight = 400;
+  const margin = { top: 60, right: 20, bottom: 30, left: 40 };
   const width = svgWidth - margin.left - margin.right;
   const height = svgHeight - margin.top - margin.bottom;
 
-  return {svgWidth, svgHeight, margin, width, height};
+  return { svgWidth, svgHeight, margin, width, height };
 }
 
-function setUpSvg(id, svgWidth, svgHeight, numericData, margin, width, height, playerName) {
-  const svg = d3.select(`#${id}`)
-      .attr("width", svgWidth)
-      .attr("height", svgHeight);
+function setUpSvg(
+  id,
+  svgWidth,
+  svgHeight,
+  numericData,
+  margin,
+  width,
+  height,
+  playerName,
+) {
+  const svg = d3
+    .select(`#${id}`)
+    .attr('width', svgWidth)
+    .attr('height', svgHeight);
 
   // Clear any previous SVG content
-  svg.selectAll("*").remove();
+  svg.selectAll('*').remove();
   // Create a scale for your attributes
-  const x = d3.scaleBand()
-      .domain(numericData.map(d => d.attribute))
-      .range([margin.left, width - margin.right])
-      .padding(0.1);
+  const x = d3
+    .scaleBand()
+    .domain(numericData.map((d) => d.attribute))
+    .range([margin.left, width - margin.right])
+    .padding(0.1);
 
-  const y = d3.scaleLinear()
-      .domain([0, d3.max(numericData, d => d.value)])
-      .nice()
-      .range([height - margin.bottom, margin.top]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(numericData, (d) => d.value)])
+    .nice()
+    .range([height - margin.bottom, margin.top]);
 
   addPlayerName(svg, playerName, width, margin);
 
-  return {svg, x, y};
+  return { svg, x, y };
 }
 
 function addPlayerName(svg, playerName, width, margin) {
   // Add the player's name as a title to the chart
-  svg.append("text")
-      .attr("x", width / 2)
-      .attr("y", margin.top / 2)
-      .text(playerName);
+  svg
+    .append('text')
+    .attr('x', width / 2)
+    .attr('y', margin.top / 2)
+    .text(playerName);
+}
+function clearSvg() {
+  d3.select('#bar-chart').selectAll('*').remove();
+  d3.select('#dot-plot').selectAll('*').remove();
 }
