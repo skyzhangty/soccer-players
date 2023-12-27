@@ -14,7 +14,7 @@ svg {
     border: 1px solid #ddd;
 }
 
-.bar {
+.bar, .circle {
     fill: steelblue;
 }
 

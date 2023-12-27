@@ -190,34 +190,16 @@ function updateVisualizations(playerData) {
       .map(skillAttr => ({attribute: skillAttr, value: playerData[skillAttr]}));
 
   updateBarChart(playerName, numericData);
+  drawDotPlot(playerName, numericData);
 }
 
 function updateBarChart(playerName, numericData) {
-  const svgWidth = 600, svgHeight = 400; // Set the SVG width and height
-  const margin = {top: 60, right: 20, bottom: 30, left: 40};
-  const width = svgWidth - margin.left - margin.right;
-  const height = svgHeight - margin.top - margin.bottom;
+  const {svgWidth, svgHeight, margin, width, height} = getSvgSize();
 
-  const svg = d3.select("#bar-chart")
-      .attr("width", svgWidth)
-      .attr("height", svgHeight);
-
-  // Clear any previous SVG content
-  svg.selectAll("*").remove();
-
-  const x = d3.scaleBand()
-      .range([0, width])
-      .padding(0.1)
-      .domain(numericData.map(d => d.attribute));
-
-  const y = d3.scaleLinear()
-      .range([height, 0])
-      .domain([0, d3.max(numericData, d => d.value)]);
+  const {svg, x, y} = setUpSvg('bar-chart', svgWidth, svgHeight, numericData, margin, width, height, playerName);
 
   const chart = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  addPlayerName(svg, playerName, width, margin);
 
   chart.selectAll(".bar")
       .data(numericData)
@@ -237,6 +219,63 @@ function updateBarChart(playerName, numericData) {
   chart.append("g")
       .call(d3.axisLeft(y));
 
+}
+
+function drawDotPlot(playerName, numericData) {
+  const {svgWidth, svgHeight, margin, width, height} = getSvgSize();
+
+  const {svg, x, y} = setUpSvg('dot-plot', svgWidth, svgHeight, numericData, margin, width, height, playerName);
+  // Draw dots
+  svg.append("g")
+      .selectAll("circle")
+      .data(numericData)
+      .enter().append("circle")
+      .attr("class", "circle")
+      .attr("cx", d => x(d.attribute) + x.bandwidth() / 2) // Center dots in the band
+      .attr("cy", d => y(d.value))
+      .attr("r", 5);
+
+  // Add the x Axis
+  svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x));
+
+  // Add the y Axis
+  svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(y));
+}
+
+function getSvgSize() {
+  const svgWidth = 600, svgHeight = 400;
+  const margin = {top: 60, right: 20, bottom: 30, left: 40};
+  const width = svgWidth - margin.left - margin.right;
+  const height = svgHeight - margin.top - margin.bottom;
+
+  return {svgWidth, svgHeight, margin, width, height};
+}
+
+function setUpSvg(id, svgWidth, svgHeight, numericData, margin, width, height, playerName) {
+  const svg = d3.select(`#${id}`)
+      .attr("width", svgWidth)
+      .attr("height", svgHeight);
+
+  // Clear any previous SVG content
+  svg.selectAll("*").remove();
+  // Create a scale for your attributes
+  const x = d3.scaleBand()
+      .domain(numericData.map(d => d.attribute))
+      .range([margin.left, width - margin.right])
+      .padding(0.1);
+
+  const y = d3.scaleLinear()
+      .domain([0, d3.max(numericData, d => d.value)])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
+  addPlayerName(svg, playerName, width, margin);
+
+  return {svg, x, y};
 }
 
 function addPlayerName(svg, playerName, width, margin) {
